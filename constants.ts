@@ -17,8 +17,7 @@ export const IMG_BTC_3D_ICON = "https://upload.wikimedia.org/wikipedia/commons/4
 export const SIMULATED_DELAY = 800;
 
 export const DURATION_OPTIONS = [
-    { label: '15 Segundos', value: '15s', ms: 15000 },
-    { label: '30 Segundos', value: '30s', ms: 30000 },
     { label: '1 Minuto', value: '1m', ms: 60000 },
     { label: '5 Minutos', value: '5m', ms: 300000 },
+    { label: '15 Minutos', value: '15m', ms: 900000 },
 ];

@@ -1,13 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import SignalCard from '../components/SignalCard';
 import { SignalDuration } from '../types';
-import { Filter, Zap, Activity, Bot, TrendingUp, Cpu } from 'lucide-react';
+import { Filter, Zap, Activity, Bot, TrendingUp, Cpu, RefreshCw, Clock } from 'lucide-react';
 import { DURATION_OPTIONS, IMG_ROBOT_INTERFACE, IMG_BTC_3D_ICON } from '../constants';
 
 const Dashboard: React.FC = () => {
-  const { signals, botConfig } = useData();
+  const { signals, botConfig, generateManualBotSignal, nextGenTime } = useData();
   const [filterDuration, setFilterDuration] = useState<SignalDuration | 'all'>('all');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
+  // Update countdown for generation button
+  useEffect(() => {
+      const updateCooldown = () => {
+          const now = Date.now();
+          const remaining = Math.max(0, Math.ceil((nextGenTime - now) / 1000));
+          setCooldownRemaining(remaining);
+      };
+
+      updateCooldown(); // initial
+      const interval = setInterval(updateCooldown, 1000);
+      return () => clearInterval(interval);
+  }, [nextGenTime]);
 
   const filteredSignals = signals.filter(s => {
       // Show active first, then expired sorted by date desc
@@ -19,7 +34,22 @@ const Dashboard: React.FC = () => {
       return b.createdAt - a.createdAt;
   });
 
-  const activeCount = signals.filter(s => s.status === 'active').length;
+  const handleGenerateClick = () => {
+      if (cooldownRemaining > 0) return;
+
+      setIsGenerating(true);
+      generateManualBotSignal();
+      // Scroll to top to see new signals
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      setTimeout(() => setIsGenerating(false), 500);
+  };
+
+  const formatCooldown = (sec: number) => {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -120,29 +150,60 @@ const Dashboard: React.FC = () => {
           </div>
       )}
 
-      {/* 3. FILTERS & GRID */}
-      <div className="sticky top-0 z-20 bg-dark-bg/95 backdrop-blur py-4 -mx-4 px-4 md:mx-0 md:px-0 border-b border-gray-800/50 md:border-none">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <div className="flex items-center gap-1 bg-card-bg border border-gray-800 p-1.5 rounded-xl shadow-lg">
-                <div className="px-3 text-gray-500">
-                    <Filter size={16} />
-                </div>
-                <button 
-                    onClick={() => setFilterDuration('all')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterDuration === 'all' ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                >
-                    TODOS
-                </button>
-                {DURATION_OPTIONS.map(opt => (
+      {/* 3. FILTERS & ACTIONS */}
+      <div className="sticky top-0 z-20 bg-dark-bg/95 backdrop-blur py-4 -mx-4 px-4 md:mx-0 md:px-0 border-b border-gray-800/50 md:border-none mb-4">
+          <div className="flex flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide flex-1">
+                <div className="flex items-center gap-1 bg-card-bg border border-gray-800 p-1.5 rounded-xl shadow-lg">
+                    <div className="px-3 text-gray-500">
+                        <Filter size={16} />
+                    </div>
                     <button 
-                        key={opt.value}
-                        onClick={() => setFilterDuration(opt.value as SignalDuration)}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${filterDuration === opt.value ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,243,255,0.4)]' : 'text-gray-400 hover:text-white'}`}
+                        onClick={() => setFilterDuration('all')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterDuration === 'all' ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
                     >
-                        {opt.value.toUpperCase()}
+                        TODOS
                     </button>
-                ))}
-            </div>
+                    {DURATION_OPTIONS.map(opt => (
+                        <button 
+                            key={opt.value}
+                            onClick={() => setFilterDuration(opt.value as SignalDuration)}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${filterDuration === opt.value ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,243,255,0.4)]' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            {opt.value.toUpperCase()}
+                        </button>
+                    ))}
+                </div>
+              </div>
+
+              <button 
+                  onClick={handleGenerateClick}
+                  disabled={isGenerating || cooldownRemaining > 0}
+                  className={`
+                    relative overflow-hidden
+                    py-3 px-6 rounded-xl 
+                    font-black 
+                    flex items-center gap-2 whitespace-nowrap
+                    transition-all duration-300
+                    ${cooldownRemaining > 0 
+                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700' 
+                        : 'bg-gradient-to-r from-neon-green to-emerald-500 text-black shadow-[0_0_20px_rgba(0,255,157,0.3)] hover:shadow-[0_0_30px_rgba(0,255,157,0.5)] transform active:scale-95 hover:scale-105'}
+                  `}
+              >
+                  {cooldownRemaining > 0 ? (
+                      <>
+                        <Clock size={20} className="animate-pulse" />
+                        <span className="font-mono">AGUARDE {formatCooldown(cooldownRemaining)}</span>
+                      </>
+                  ) : (
+                      <>
+                        <div className={`absolute inset-0 bg-white/20 transition-transform duration-300 ${isGenerating ? 'translate-x-0' : '-translate-x-full'}`}></div>
+                        <Zap size={20} className={`fill-black ${isGenerating ? 'animate-spin' : 'animate-pulse'}`} />
+                        <span className="hidden sm:inline">GERAR SINAIS</span>
+                        <span className="sm:hidden">GERAR</span>
+                      </>
+                  )}
+              </button>
           </div>
       </div>
 

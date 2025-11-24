@@ -12,6 +12,7 @@ interface DataContextType {
   botConfig: BotConfig;
   updateBotConfig: (config: Partial<BotConfig>) => void;
   generateManualBotSignal: () => void;
+  nextGenTime: number; // Expose cooldown time
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -23,8 +24,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Bot State - Default Active
   const [botConfig, setBotConfig] = useState<BotConfig>(() => {
       const saved = localStorage.getItem('btc_bot_config');
-      return saved ? JSON.parse(saved) : { isActive: true, intervalSeconds: 30 };
+      // Default set to 120 seconds (2 minutes) per user request
+      return saved ? JSON.parse(saved) : { isActive: true, intervalSeconds: 120 };
   });
+
+  const [nextGenTime, setNextGenTime] = useState<number>(0);
 
   // Load initial data
   useEffect(() => {
@@ -51,15 +55,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const generateRandomSignal = useCallback(() => {
     const now = Date.now();
-    const newSignalsBatch: Signal[] = [];
-    const BATCH_SIZE = 10; // Generate 10 signals per tick
+    
+    // ENFORCE COOLDOWN: If current time is less than next generation time, do nothing.
+    if (now < nextGenTime) {
+        return; 
+    }
 
-    for (let i = 0; i < BATCH_SIZE; i++) {
+    const newSignalsBatch: Signal[] = [];
+    
+    // STRICT REQUIREMENT: 3 Signals (1m, 5m, 15m)
+    const requiredDurations: { label: SignalDuration, sec: number }[] = [
+        { label: '1m', sec: 60 },
+        { label: '5m', sec: 300 },
+        { label: '15m', sec: 900 }
+    ];
+
+    requiredDurations.forEach((durInfo, i) => {
         // 1. Action (Direction)
-        const direction: 'BUY' | 'SELL' = Math.random() > 0.5 ? 'BUY' : 'SELL';
+        // INVERTED LOGIC: > 0.5 ? 'SELL' : 'BUY'
+        const direction: 'BUY' | 'SELL' = Math.random() > 0.5 ? 'SELL' : 'BUY';
         
         // 2. Price Generation (Base 68000 +/- 200)
-        // Add a slight variance per signal in the batch so they aren't identical prices
         const basePrice = 68000;
         const variation = (Math.random() * 400) - 200; 
         const microVariation = (Math.random() * 10) - 5; 
@@ -80,15 +96,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const takeProfit = [Number(tp1.toFixed(2)), Number(tp2.toFixed(2))].sort((a,b) => direction === 'BUY' ? a - b : b - a);
 
-        // 5. Expiration - Randomly select for EACH signal in the batch
-        const expiryOptions = [
-            { label: '15s', sec: 15 }, 
-            { label: '30s', sec: 30 }, 
-            { label: '1m', sec: 60 }, 
-            { label: '5m', sec: 300 }
-        ];
-        const selectedExpiry = expiryOptions[Math.floor(Math.random() * expiryOptions.length)];
-
         const newSignal: Signal = {
             id: crypto.randomUUID(),
             symbol: 'BTC',
@@ -96,38 +103,43 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             entryPrice: entryPrice,
             stopLoss: stopLoss,
             takeProfit: takeProfit,
-            duration: selectedExpiry.label as SignalDuration,
-            expirySeconds: selectedExpiry.sec,
-            createdAt: now + i, // Add ms to ensure unique sorting if needed
-            expiresAt: now + (selectedExpiry.sec * 1000),
+            duration: durInfo.label,
+            expirySeconds: durInfo.sec,
+            createdAt: now + i, // Add ms to ensure unique sorting
+            expiresAt: now + (durInfo.sec * 1000),
             status: 'active',
             generatedBy: 'AUTO_BOT',
             notes: '⚡ Algo Trading'
         };
         
         newSignalsBatch.push(newSignal);
-    }
-
-    setSignals(prev => {
-        const updated = [...newSignalsBatch, ...prev];
-        // Keep array size manageable (e.g., max 100 signals)
-        const trimmed = updated.slice(0, 100); 
-        localStorage.setItem('btc_signals', JSON.stringify(trimmed));
-        return trimmed;
     });
 
-  }, []);
+    setSignals(prev => {
+        // Prevent Accumulation: Replace active signals
+        const history = prev.filter(s => s.status !== 'active').slice(0, 20);
+        const updated = [...newSignalsBatch, ...history];
+        localStorage.setItem('btc_signals', JSON.stringify(updated));
+        return updated;
+    });
+
+    // SET COOLDOWN based on interval settings
+    setNextGenTime(now + (botConfig.intervalSeconds * 1000));
+
+  }, [botConfig.intervalSeconds, nextGenTime]);
 
   // Bot Loop
   useEffect(() => {
       if (!botConfig.isActive) return;
 
       const timer = setInterval(() => {
+          // The function itself checks nextGenTime, so we can call it.
+          // However, to avoid drift, we rely on the internal check.
           generateRandomSignal();
-      }, botConfig.intervalSeconds * 1000);
+      }, 1000); // Check every second if we can generate
 
       return () => clearInterval(timer);
-  }, [botConfig.isActive, botConfig.intervalSeconds, generateRandomSignal]);
+  }, [botConfig.isActive, generateRandomSignal]);
 
   // --- BOT LOGIC END ---
 
@@ -180,6 +192,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateBotConfig = (config: Partial<BotConfig>) => {
       setBotConfig(prev => ({ ...prev, ...config }));
+      // If manually changing settings, reset timer to allow immediate action if desired, 
+      // or keep it to prevent abuse. Keeping it simple for now.
   };
 
   const getStats = () => {
@@ -200,7 +214,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleUserLicense,
         botConfig,
         updateBotConfig,
-        generateManualBotSignal: generateRandomSignal
+        generateManualBotSignal: generateRandomSignal,
+        nextGenTime
     }}>
       {children}
     </DataContext.Provider>

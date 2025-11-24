@@ -92,7 +92,7 @@ const Admin: React.FC = () => {
                         <div>
                             <label className="text-sm text-gray-400 block mb-2">Intervalo de Geração (segundos)</label>
                             <div className="flex gap-2">
-                                {[15, 30, 60, 300].map(sec => (
+                                {[30, 60, 120, 300].map(sec => (
                                     <button
                                         key={sec}
                                         onClick={() => updateBotConfig({ intervalSeconds: sec })}

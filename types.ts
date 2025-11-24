@@ -14,7 +14,7 @@ export interface User {
 }
 
 export type SignalDirection = 'BUY' | 'SELL';
-export type SignalDuration = '15s' | '30s' | '1m' | '5m';
+export type SignalDuration = '1m' | '5m' | '15m';
 export type SignalStatus = 'active' | 'closed' | 'expired';
 
 export interface Signal {
