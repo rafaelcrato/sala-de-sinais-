@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Signal } from '../types';
-import { ArrowUpCircle, ArrowDownCircle, Clock, Copy, ExternalLink, Bot } from 'lucide-react';
-import { BROKER_URL } from '../constants';
+import { ArrowUpCircle, ArrowDownCircle, Clock, ExternalLink, Bot, AlertTriangle } from 'lucide-react';
+import { BROKER_URL, IMG_LOGO, DURATION_OPTIONS } from '../constants';
 
 interface SignalCardProps {
   signal: Signal;
@@ -41,12 +41,11 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const copyToClipboard = () => {
-      alert(`Ordem copiada: ${signal.direction} BTC em ${signal.entryPrice}`);
-  };
-
   // Clean display of symbol to remove USDT suffix if present
   const displaySymbol = signal.symbol ? signal.symbol.replace('USDT', '') : 'BTC';
+
+  // Get full label for duration
+  const durationLabel = DURATION_OPTIONS.find(d => d.value === signal.duration)?.label || signal.duration;
 
   return (
     <div className={`relative bg-card-bg border ${borderColor} rounded-xl p-5 mb-4 transition-all duration-300 ${glowColor} ${opacity} group`}>
@@ -65,6 +64,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
             </div>
             <div>
                 <h3 className="font-bold text-lg flex items-center gap-2">
+                    <img src={IMG_LOGO} alt="BTC" className="w-5 h-5 object-contain" />
                     {displaySymbol}
                     <span className={`text-xs px-2 py-0.5 rounded border ${isBuy ? 'border-neon-green text-neon-green' : 'border-neon-red text-neon-red'}`}>
                         {signal.direction === 'BUY' ? 'COMPRA' : 'VENDA'}
@@ -112,30 +112,40 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
       {/* Info */}
       <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
          <div className="flex items-center gap-1">
-            <Clock size={12} /> Duração: <span className="text-white">{signal.duration}</span>
+            <Clock size={12} /> Operação para <span className="text-white">{durationLabel}</span>
          </div>
          {signal.notes && (
              <div className="italic text-gray-500">"{signal.notes}"</div>
          )}
       </div>
 
+      {/* URGENCY ALERT BANNER */}
+      {!isExpired && signal.status === 'active' && (
+          <div className="mb-3 animate-pulse">
+              <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg p-2 flex items-center justify-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                  </span>
+                  <span className="text-xs font-bold text-yellow-200 uppercase tracking-wide flex items-center gap-1">
+                      <AlertTriangle size={12} /> Corra! Abra na corretora
+                  </span>
+              </div>
+          </div>
+      )}
+
       {/* Actions */}
-      <div className="flex gap-3">
-          <button 
-            onClick={copyToClipboard}
-            className="w-14 flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg transition-colors"
-            title="Copiar"
-          >
-            <Copy size={20} />
-          </button>
-          
+      <div className="flex">
           <a 
             href={BROKER_URL}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold tracking-wide transition-all shadow-lg 
+            ${!isExpired && signal.status === 'active' 
+                ? 'bg-gradient-to-r from-neon-blue to-blue-600 text-white hover:brightness-110 hover:scale-[1.02] shadow-[0_0_15px_rgba(0,243,255,0.3)]' 
+                : 'bg-neon-blue/10 text-neon-blue border border-neon-blue/50'}`}
           >
-             Abrir Corretora <ExternalLink size={16} />
+             ABRIR CORRETORA <ExternalLink size={16} />
           </a>
       </div>
     </div>

@@ -1,25 +1,20 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { SignalDirection, SignalDuration } from '../types';
-import { DURATION_OPTIONS } from '../constants';
 import { 
     Radio, 
-    Users, 
-    DollarSign, 
-    Trash2, 
-    ArrowUpCircle, 
-    ArrowDownCircle,
+    Zap, 
     Bot,
     Play,
     Pause,
-    Zap
+    ArrowUpCircle,
+    ArrowDownCircle,
+    Trash2
 } from 'lucide-react';
 
 const Admin: React.FC = () => {
   const { 
       signals, 
-      addSignal, 
       deleteSignal, 
       getStats, 
       botConfig,
@@ -27,42 +22,11 @@ const Admin: React.FC = () => {
       generateManualBotSignal
   } = useData();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'signals' | 'overview' | 'bot'>('overview');
-
-  // Form State
-  const [direction, setDirection] = useState<SignalDirection>('BUY');
-  const [entryPrice, setEntryPrice] = useState('');
-  const [duration, setDuration] = useState<SignalDuration>('1m');
-  const [notes, setNotes] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bot'>('overview');
 
   if (user?.role !== 'admin') {
       return <div className="p-10 text-center text-red-500">Acesso Negado</div>;
   }
-
-  const handleCreateSignal = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!entryPrice) return;
-      
-      const entry = parseFloat(entryPrice);
-      // Auto calculate SL/TP based on mock strategy (e.g. 0.1% diff)
-      const diff = entry * 0.0005; 
-      
-      const sl = direction === 'BUY' ? entry - diff : entry + diff;
-      const tp = direction === 'BUY' ? entry + diff : entry - diff;
-
-      addSignal({
-          direction,
-          entryPrice: entry,
-          stopLoss: Number(sl.toFixed(2)),
-          takeProfit: [Number(tp.toFixed(2))],
-          duration,
-          notes: notes || undefined
-      });
-
-      // Reset
-      setEntryPrice('');
-      setNotes('');
-  };
 
   const stats = getStats();
 
@@ -73,7 +37,6 @@ const Admin: React.FC = () => {
            <div className="flex bg-card-bg border border-gray-800 p-1 rounded-lg overflow-x-auto">
                <button onClick={() => setActiveTab('overview')} className={`px-4 py-2 rounded text-sm font-medium ${activeTab === 'overview' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}>Visão Geral</button>
                <button onClick={() => setActiveTab('bot')} className={`px-4 py-2 rounded text-sm font-medium flex items-center gap-2 ${activeTab === 'bot' ? 'bg-neon-blue/20 text-neon-blue' : 'text-gray-400'}`}><Bot size={16}/> Auto Bot</button>
-               <button onClick={() => setActiveTab('signals')} className={`px-4 py-2 rounded text-sm font-medium ${activeTab === 'signals' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}>Sinais Manuais</button>
            </div>
        </div>
 
@@ -165,116 +128,20 @@ const Admin: React.FC = () => {
                                     <div className="text-[10px] text-gray-500">{new Date(signal.createdAt).toLocaleTimeString()} • {signal.duration}</div>
                                 </div>
                             </div>
-                            <span className={`text-[10px] px-2 py-0.5 rounded ${signal.status === 'active' ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-500'}`}>
-                                {signal.status}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] px-2 py-0.5 rounded ${signal.status === 'active' ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-500'}`}>
+                                    {signal.status}
+                                </span>
+                                <button onClick={() => deleteSignal(signal.id)} className="p-1 hover:text-red-500 text-gray-600 transition-colors">
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
                         </div>
                     ))}
                     {signals.filter(s => s.generatedBy === 'AUTO_BOT').length === 0 && (
                         <div className="text-center py-10 text-gray-500 text-sm">Nenhum sinal do bot ainda.</div>
                     )}
                 </div>
-           </div>
-       )}
-
-       {activeTab === 'signals' && (
-           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               {/* Create Form */}
-               <div className="lg:col-span-1">
-                   <div className="bg-card-bg p-6 rounded-xl border border-gray-800 sticky top-4">
-                       <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                           <Radio size={18} className="text-neon-blue" /> Novo Sinal Manual
-                       </h3>
-                       <form onSubmit={handleCreateSignal} className="space-y-4">
-                           <div className="grid grid-cols-2 gap-2">
-                               <button 
-                                type="button" 
-                                onClick={() => setDirection('BUY')}
-                                className={`p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${direction === 'BUY' ? 'bg-neon-green/20 border-neon-green text-neon-green' : 'border-gray-700 text-gray-500'}`}
-                               >
-                                   <ArrowUpCircle /> Compra
-                               </button>
-                               <button 
-                                type="button" 
-                                onClick={() => setDirection('SELL')}
-                                className={`p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${direction === 'SELL' ? 'bg-neon-red/20 border-neon-red text-neon-red' : 'border-gray-700 text-gray-500'}`}
-                               >
-                                   <ArrowDownCircle /> Venda
-                               </button>
-                           </div>
-
-                           <div>
-                               <label className="text-xs text-gray-400 mb-1 block">Preço de Entrada (BTC)</label>
-                               <input 
-                                value={entryPrice} 
-                                onChange={e => setEntryPrice(e.target.value)}
-                                type="number" 
-                                className="w-full bg-dark-bg border border-gray-700 rounded p-2 text-white focus:border-neon-blue outline-none" 
-                                placeholder="ex: 64500.50"
-                                required
-                               />
-                           </div>
-
-                           <div>
-                               <label className="text-xs text-gray-400 mb-1 block">Expiração</label>
-                               <select 
-                                value={duration}
-                                onChange={e => setDuration(e.target.value as SignalDuration)}
-                                className="w-full bg-dark-bg border border-gray-700 rounded p-2 text-white focus:border-neon-blue outline-none"
-                               >
-                                   {DURATION_OPTIONS.map(opt => (
-                                       <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                   ))}
-                               </select>
-                           </div>
-
-                           <div>
-                               <label className="text-xs text-gray-400 mb-1 block">Observações (Opcional)</label>
-                               <input 
-                                value={notes}
-                                onChange={e => setNotes(e.target.value)}
-                                type="text" 
-                                className="w-full bg-dark-bg border border-gray-700 rounded p-2 text-white focus:border-neon-blue outline-none" 
-                                placeholder="ex: Pullback na média"
-                               />
-                           </div>
-
-                           <button type="submit" className="w-full bg-neon-blue hover:bg-cyan-400 text-black font-bold py-3 rounded-lg transition-colors">
-                               ENVIAR SINAL
-                           </button>
-                       </form>
-                   </div>
-               </div>
-
-               {/* List */}
-               <div className="lg:col-span-2 space-y-3">
-                   <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2">Últimos Sinais (Todos)</h3>
-                   {signals.map(signal => (
-                       <div key={signal.id} className="bg-card-bg border border-gray-800 p-4 rounded-lg flex items-center justify-between">
-                           <div className="flex items-center gap-4">
-                               <div className={`w-2 h-12 rounded-full ${signal.direction === 'BUY' ? 'bg-neon-green' : 'bg-neon-red'}`}></div>
-                               <div>
-                                   <div className="flex items-center gap-2">
-                                       <span className={`font-bold ${signal.direction === 'BUY' ? 'text-neon-green' : 'text-neon-red'}`}>{signal.direction}</span>
-                                       <span className="text-white font-mono">{signal.entryPrice}</span>
-                                       {signal.generatedBy === 'AUTO_BOT' && (
-                                           <span className="bg-purple-500/20 text-purple-400 text-[10px] px-1 rounded flex items-center gap-1"><Bot size={10}/> BOT</span>
-                                       )}
-                                   </div>
-                                   <div className="text-xs text-gray-500">
-                                       {signal.duration} • {new Date(signal.createdAt).toLocaleTimeString()}
-                                       <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${signal.status === 'active' ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'}`}>
-                                           {signal.status}
-                                       </span>
-                                   </div>
-                               </div>
-                           </div>
-                           <button onClick={() => deleteSignal(signal.id)} className="p-2 hover:bg-red-500/20 hover:text-red-500 text-gray-600 rounded-full transition-colors">
-                               <Trash2 size={18} />
-                           </button>
-                       </div>
-                   ))}
-               </div>
            </div>
        )}
     </div>

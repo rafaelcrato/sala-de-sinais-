@@ -5,7 +5,6 @@ import { DataProvider } from './contexts/DataContext';
 import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
 import Admin from './pages/Admin';
-import Profile from './pages/Profile';
 
 const AppContent = () => {
     return (
@@ -13,8 +12,6 @@ const AppContent = () => {
             {/* Main App Routes */}
             <Route element={<Layout />}>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/history" element={<div className="text-center p-10 text-gray-500">Histórico em breve...</div>} />
-                <Route path="/profile" element={<Profile />} />
                 <Route path="/admin" element={<Admin />} />
             </Route>
 
