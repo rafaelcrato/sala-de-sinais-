@@ -148,7 +148,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         { symbol: 'TRUMP', basePrice: 3.50, logo: 'https://assets.coingecko.com/coins/images/31260/standard/trump.jpg' },
         { symbol: 'FARTCOIN', basePrice: 0.00001, logo: 'https://assets.coingecko.com/coins/images/34065/standard/FartCoin.jpeg' }, 
         { symbol: 'PENGU', basePrice: 0.05, logo: 'https://assets.coingecko.com/coins/images/39328/standard/pengu.jpg' },
-        { symbol: 'MELANINA', basePrice: 0.01, logo: 'https://cdn-icons-png.flaticon.com/512/2152/2152539.png' }, // Generic coin icon
+        // Added back MELANINA with a generated logo to ensure it has a visual
+        { symbol: 'MELANINA', basePrice: 0.002, logo: 'https://ui-avatars.com/api/?name=Melanina+Coin&background=random&rounded=true&color=fff' },
     ];
 
     // Generate BATCH_SIZE (20) signals
@@ -186,49 +187,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const slPercent = volatilityMultiplier * (0.8 + Math.random() * 0.4); // slightly randomized
         const tp1Percent = volatilityMultiplier * (1.2 + Math.random() * 0.5);
-        const tp2Percent = volatilityMultiplier * (2.0 + Math.random() * 0.8);
 
-        let stopLoss, tp1, tp2;
+        let stopLoss, takeProfit1;
 
         if (direction === 'BUY') {
             stopLoss = entryPrice * (1 - slPercent);
-            tp1 = entryPrice * (1 + tp1Percent);
-            tp2 = entryPrice * (1 + tp2Percent);
-        } else { // SELL
+            takeProfit1 = entryPrice * (1 + tp1Percent);
+        } else {
+            // SELL
             stopLoss = entryPrice * (1 + slPercent);
-            tp1 = entryPrice * (1 - tp1Percent);
-            tp2 = entryPrice * (1 - tp2Percent);
+            takeProfit1 = entryPrice * (1 - tp1Percent);
         }
-
-        // Format SL/TP with correct decimals
-        const slFormatted = Number(stopLoss.toFixed(decimals));
-        const tp1Formatted = Number(tp1.toFixed(decimals));
-        const tp2Formatted = Number(tp2.toFixed(decimals));
-
-        const takeProfit = [tp1Formatted, tp2Formatted].sort((a,b) => direction === 'BUY' ? a - b : b - a);
-
-        // 4. GENERATE ACCURACY AND REASONING
-        // Accuracy between 75% and 95%
-        const accuracy = Math.floor(Math.random() * (95 - 75 + 1)) + 75;
         
-        // Reasoning based on direction
-        const reasonsList = direction === 'BUY' ? BUY_REASONS : SELL_REASONS;
-        const reasoning = reasonsList[Math.floor(Math.random() * reasonsList.length)];
+        // Technical Reason & Accuracy
+        // ACCURACY: 75% to 95%
+        const accuracy = Math.floor(Math.random() * (95 - 75 + 1)) + 75;
+        const reasoning = direction === 'BUY' 
+            ? BUY_REASONS[Math.floor(Math.random() * BUY_REASONS.length)]
+            : SELL_REASONS[Math.floor(Math.random() * SELL_REASONS.length)];
 
         const newSignal: Signal = {
-            id: crypto.randomUUID(),
+            id: Math.random().toString(36).substr(2, 9),
             symbol: asset.symbol,
             direction: direction,
             entryPrice: entryPrice,
-            stopLoss: slFormatted,
-            takeProfit: takeProfit,
+            stopLoss: Number(stopLoss.toFixed(decimals)),
+            takeProfit: [Number(takeProfit1.toFixed(decimals))],
             duration: durInfo.label,
             expirySeconds: durInfo.sec,
-            createdAt: now, // Same batch time
             expiresAt: now + (durInfo.sec * 1000),
+            createdAt: now,
             status: 'active',
             generatedBy: 'AUTO_BOT',
-            notes: '⚡ Algo Trading',
             logo: asset.logo,
             accuracy: accuracy,
             reasoning: reasoning
@@ -236,96 +226,74 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         newSignalsBatch.push(newSignal);
     }
-
+    
+    // REPLACE previous active signals to avoid accumulation
     setSignals(prev => {
-        // Prevent Accumulation: Replace active signals
-        // Keep expired signals for history (limit 20)
-        const history = prev.filter(s => s.status !== 'active').slice(0, 20);
-        const updated = [...newSignalsBatch, ...history];
-        localStorage.setItem('btc_signals', JSON.stringify(updated));
-        return updated;
+        const expiredOrClosed = prev.filter(s => s.status !== 'active');
+        // Keep max 10 historical items
+        const recentHistory = expiredOrClosed.sort((a,b) => b.createdAt - a.createdAt).slice(0, 10);
+        return [...newSignalsBatch, ...recentHistory];
     });
 
-    // SET COOLDOWN based on interval settings
+    // Set next generation time (Current Time + Configured Interval)
     setNextGenTime(now + (botConfig.intervalSeconds * 1000));
 
   }, [botConfig.intervalSeconds, nextGenTime]);
 
-  // Bot Loop
-  useEffect(() => {
-      if (!botConfig.isActive) return;
+  const generateManualBotSignal = () => {
+      // Force bypass timestamp check for manual button, but still set next gen time
+      setNextGenTime(0); // reset momentarily to allow call
+      setTimeout(() => generateRandomSignal(), 0);
+  };
 
-      const timer = setInterval(() => {
-          // The function itself checks nextGenTime, so we can call it.
-          // However, to avoid drift, we rely on the internal check.
-          generateRandomSignal();
-      }, 1000); // Check every second if we can generate
-
-      return () => clearInterval(timer);
-  }, [botConfig.isActive, generateRandomSignal]);
-
-  // --- BOT LOGIC END ---
-
-  // Timer to auto-expire signals (Maintenance Loop)
+  // Check for expired signals every second
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      setSignals(prev => {
-        let changed = false;
-        const newSignals = prev.map(s => {
-          if (s.status === 'active' && s.expiresAt <= now) {
-            changed = true;
-            return { ...s, status: 'expired' as const };
-          }
-          return s;
-        });
-        
-        if (changed) {
-          localStorage.setItem('btc_signals', JSON.stringify(newSignals));
-          return newSignals;
+      setSignals(prev => prev.map(s => {
+        if (s.status === 'active' && now > s.expiresAt) {
+          // Determine result randomly for simulation
+          const result = Math.random() > 0.3 ? 'WIN' : 'LOSS';
+          return { ...s, status: 'expired', result };
         }
-        return prev;
-      });
-    }, 1000); 
+        return s;
+      }));
+      
+      // Auto-generate if bot is active and time has passed
+      if (botConfig.isActive && now >= nextGenTime && nextGenTime !== 0) {
+          generateRandomSignal();
+      }
+      // If nextGenTime is 0 (first run), start it
+      if (botConfig.isActive && nextGenTime === 0) {
+          generateRandomSignal();
+      }
 
+    }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [botConfig.isActive, nextGenTime, generateRandomSignal]);
 
   const deleteSignal = (id: string) => {
-    const updated = signals.filter(s => s.id !== id);
-    setSignals(updated);
-    localStorage.setItem('btc_signals', JSON.stringify(updated));
+    setSignals(prev => prev.filter(s => s.id !== id));
   };
-  
+
+  const getStats = () => {
+    const totalSignals = signals.length;
+    const activeSignals = signals.filter(s => s.status === 'active').length;
+    const botSignals = signals.filter(s => s.generatedBy === 'AUTO_BOT').length;
+    return { totalSignals, activeSignals, botSignals };
+  };
+
   const toggleUserLicense = (userId: string) => {
-     const dbUsers = JSON.parse(localStorage.getItem('btc_users_db') || '[]');
-     const updatedDb = dbUsers.map((u: any) => {
-         if (u.id === userId) {
-             return { ...u, licenseStatus: u.licenseStatus === 'active' ? 'inactive' : 'active' };
-         }
-         return u;
-     });
-     localStorage.setItem('btc_users_db', JSON.stringify(updatedDb));
-     
-     setUsersList(updatedDb.map((u: any) => {
-         const { password, ...rest } = u;
-         return rest;
-     }));
+      setUsersList(prev => prev.map(u => {
+          if (u.id === userId) {
+              return { ...u, licenseStatus: u.licenseStatus === 'active' ? 'inactive' : 'active' };
+          }
+          return u;
+      }));
   };
 
   const updateBotConfig = (config: Partial<BotConfig>) => {
       setBotConfig(prev => ({ ...prev, ...config }));
-      // If manually changing settings, reset timer to allow immediate action if desired, 
-      // or keep it to prevent abuse. Keeping it simple for now.
-  };
-
-  const getStats = () => {
-    return {
-      totalSignals: signals.length,
-      activeSignals: signals.filter(s => s.status === 'active').length,
-      botSignals: signals.filter(s => s.generatedBy === 'AUTO_BOT').length,
-      totalUsers: usersList.length
-    };
   };
 
   return (
@@ -334,10 +302,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteSignal, 
         getStats, 
         usersList, 
-        toggleUserLicense, 
-        botConfig, 
+        toggleUserLicense,
+        botConfig,
         updateBotConfig,
-        generateManualBotSignal: generateRandomSignal,
+        generateManualBotSignal,
         nextGenTime
     }}>
       {children}
