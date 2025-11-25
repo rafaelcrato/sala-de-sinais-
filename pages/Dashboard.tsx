@@ -57,7 +57,7 @@ const Dashboard: React.FC = () => {
       {/* 1. STRATEGIC HERO SECTION - "The Master" */}
       <div className="relative rounded-[2rem] overflow-hidden bg-[#0a0a12] border border-gray-800 shadow-2xl min-h-[350px] flex items-center group">
          
-         {/* Background Elements */}
+         {/* Background Elements - Clean Dark */}
          <div className="absolute inset-0 z-0">
             <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a12] via-[#0a0a12]/90 to-transparent"></div>
          </div>
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
 
                  {/* Stats Cards */}
                  <div className="flex flex-wrap justify-center gap-4 pt-4">
-                     <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-2xl border border-gray-800 shadow-lg min-w-[140px] relative overflow-hidden">
+                     <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-2xl border border-gray-800 shadow-lg min-w-[140px] relative overflow-hidden backdrop-blur-sm bg-opacity-80">
                          <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                          <span className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">Assertividade</span>
                          <div className="flex items-center justify-center gap-2">
@@ -97,7 +97,7 @@ const Dashboard: React.FC = () => {
                             <TrendingUp size={18} className="text-gold mb-1" />
                          </div>
                      </div>
-                     <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-2xl border border-gray-800 shadow-lg min-w-[140px]">
+                     <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-2xl border border-gray-800 shadow-lg min-w-[140px] backdrop-blur-sm bg-opacity-80">
                          <span className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">Sinais Hoje</span>
                          <div className="flex items-center justify-center gap-2">
                             <span className="text-3xl font-mono text-neon-green font-bold leading-none">{signals.length}</span>

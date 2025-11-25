@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Signal } from '../types';
-import { ArrowUpCircle, ArrowDownCircle, Clock, ExternalLink, Bot, AlertTriangle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Clock, ExternalLink, Bot, AlertTriangle, Coins } from 'lucide-react';
 import { BROKER_URL, IMG_LOGO, DURATION_OPTIONS } from '../constants';
 
 interface SignalCardProps {
@@ -41,6 +42,12 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Helper to format price based on value (more decimals for cheaper coins)
+  const formatPrice = (price: number) => {
+      const decimals = price < 10 ? 4 : 2;
+      return price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+
   // Clean display of symbol to remove USDT suffix if present
   const displaySymbol = signal.symbol ? signal.symbol.replace('USDT', '') : 'BTC';
 
@@ -64,7 +71,12 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
             </div>
             <div>
                 <h3 className="font-bold text-lg flex items-center gap-2">
-                    <img src={IMG_LOGO} alt="BTC" className="w-5 h-5 object-contain" />
+                    {/* Use signal logo if available, else generic logo */}
+                    <img 
+                        src={signal.logo || IMG_LOGO} 
+                        alt={displaySymbol} 
+                        className="w-6 h-6 object-contain rounded-full bg-white/10 p-0.5" 
+                    />
                     {displaySymbol}
                     <span className={`text-xs px-2 py-0.5 rounded border ${isBuy ? 'border-neon-green text-neon-green' : 'border-neon-red text-neon-red'}`}>
                         {signal.direction === 'BUY' ? 'COMPRA' : 'VENDA'}
@@ -97,15 +109,15 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
       <div className="grid grid-cols-3 gap-2 mb-4 bg-black/20 p-3 rounded-lg border border-white/5">
          <div className="text-center">
             <p className="text-[10px] text-gray-500 uppercase">Entrada</p>
-            <p className="font-mono text-white font-bold">{signal.entryPrice.toLocaleString()}</p>
+            <p className="font-mono text-white font-bold">{formatPrice(signal.entryPrice)}</p>
          </div>
          <div className="text-center border-l border-gray-700">
             <p className="text-[10px] text-gray-500 uppercase">Stop Loss</p>
-            <p className="font-mono text-neon-red">{signal.stopLoss.toLocaleString()}</p>
+            <p className="font-mono text-neon-red">{formatPrice(signal.stopLoss)}</p>
          </div>
          <div className="text-center border-l border-gray-700">
             <p className="text-[10px] text-gray-500 uppercase">Take Profit</p>
-            <p className="font-mono text-neon-green">{signal.takeProfit[0].toLocaleString()}</p>
+            <p className="font-mono text-neon-green">{formatPrice(signal.takeProfit[0])}</p>
          </div>
       </div>
 

@@ -1,3 +1,5 @@
+
+
 export type UserRole = 'user' | 'admin';
 
 export type LicenseStatus = 'active' | 'inactive' | 'pending';
@@ -14,7 +16,7 @@ export interface User {
 }
 
 export type SignalDirection = 'BUY' | 'SELL';
-export type SignalDuration = '1m' | '5m' | '15m';
+export type SignalDuration = '15s' | '30s' | '1m' | '5m' | '15m';
 export type SignalStatus = 'active' | 'closed' | 'expired';
 
 export interface Signal {
@@ -31,7 +33,8 @@ export interface Signal {
   notes?: string;
   status: SignalStatus;
   generatedBy: 'MANUAL' | 'AUTO_BOT';
-  result?: 'WIN' | 'LOSS' | 'NEUTRAL'; 
+  result?: 'WIN' | 'LOSS' | 'NEUTRAL';
+  logo?: string;
 }
 
 export interface BotConfig {
