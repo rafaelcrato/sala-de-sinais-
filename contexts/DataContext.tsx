@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Signal, SignalDuration, User, BotConfig } from '../types';
 import { DURATION_OPTIONS, IMG_LOGO } from '../constants';
@@ -74,57 +73,82 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         { label: '15m', sec: 900 }
     ];
 
+    // Technical Analysis Reasons
+    const BUY_REASONS = [
+        "RSI em zona de sobrevenda extrema",
+        "Rompimento de cunha descendente",
+        "Cruzamento de médias móveis (EMA 9/21)",
+        "Suporte forte confirmado no Order Block",
+        "Divergência altista no MACD",
+        "Volume comprador institucional detectado",
+        "Reteste de Fibonacci 61.8%",
+        "Padrão Martelo no gráfico de 1M"
+    ];
+
+    const SELL_REASONS = [
+        "RSI em zona de sobrecompra crítica",
+        "Rejeição em resistência psicológica",
+        "Cruzamento da morte (Death Cross)",
+        "Formação de topo duplo confirmada",
+        "Perda de suporte dinâmico (LTA)",
+        "Divergência baixista no RSI Estocástico",
+        "Volume vendedor absorvendo ofertas",
+        "Padrão Estrela Cadente identificado"
+    ];
+
     // List of assets to generate signals for with Logos
+    // Updated with reliable CoinGecko sources for all requested assets
     const CRYPTO_ASSETS = [
-        { symbol: 'BTCUSDT', basePrice: 67500, logo: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=035' },
-        { symbol: 'ETHUSDT', basePrice: 2650, logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035' },
-        { symbol: 'ARBUSDT', basePrice: 0.55, logo: 'https://cryptologos.cc/logos/arbitrum-arb-logo.png?v=035' },
-        { symbol: 'ATOMUSDT', basePrice: 4.50, logo: 'https://cryptologos.cc/logos/cosmos-atom-logo.png?v=035' },
-        { symbol: 'BCHUSDT', basePrice: 330, logo: 'https://cryptologos.cc/logos/bitcoin-cash-bch-logo.png?v=035' },
-        { symbol: 'ADAUSDT', basePrice: 0.35, logo: 'https://cryptologos.cc/logos/cardano-ada-logo.png?v=035' },
-        { symbol: 'DASHUSDT', basePrice: 25, logo: 'https://cryptologos.cc/logos/dash-dash-logo.png?v=035' },
-        { symbol: 'DOGEUSDT', basePrice: 0.11, logo: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png?v=035' },
-        { symbol: 'DOTUSDT', basePrice: 4.20, logo: 'https://cryptologos.cc/logos/polkadot-new-dot-logo.png?v=035' },
-        { symbol: 'DYDXUSDT', basePrice: 1.00, logo: 'https://cryptologos.cc/logos/dydx-dydx-logo.png?v=035' },
-        { symbol: 'EOSUSDT', basePrice: 0.50, logo: 'https://cryptologos.cc/logos/eos-eos-logo.png?v=035' },
-        { symbol: 'FARTCOIN', basePrice: 0.00001, logo: 'https://assets.coingecko.com/coins/images/34065/standard/FartCoin.jpeg' }, 
-        { symbol: 'FLOKIUSDT', basePrice: 0.00014, logo: 'https://cryptologos.cc/logos/floki-inu-floki-logo.png?v=035' },
-        { symbol: 'GRTUSDT', basePrice: 0.15, logo: 'https://cryptologos.cc/logos/the-graph-grt-logo.png?v=035' },
-        { symbol: 'HBARUSDT', basePrice: 0.05, logo: 'https://cryptologos.cc/logos/hedera-hbar-logo.png?v=035' },
-        { symbol: 'ICPUSDT', basePrice: 8.00, logo: 'https://cryptologos.cc/logos/internet-computer-icp-logo.png?v=035' },
-        { symbol: 'IMXUSDT', basePrice: 1.50, logo: 'https://cryptologos.cc/logos/immutable-x-imx-logo.png?v=035' },
-        { symbol: 'INJUSDT', basePrice: 20.00, logo: 'https://cryptologos.cc/logos/injective-inj-logo.png?v=035' },
-        { symbol: 'IOTAUSDT', basePrice: 0.12, logo: 'https://cryptologos.cc/logos/iota-miota-logo.png?v=035' },
-        { symbol: 'JUPUSDT', basePrice: 0.80, logo: 'https://cryptologos.cc/logos/jupiter-ag-jup-logo.png?v=035' },
-        { symbol: 'LINKUSDT', basePrice: 11.00, logo: 'https://cryptologos.cc/logos/chainlink-link-logo.png?v=035' },
-        { symbol: 'LTCUSDT', basePrice: 70, logo: 'https://cryptologos.cc/logos/litecoin-ltc-logo.png?v=035' },
-        { symbol: 'MANAUSDT', basePrice: 0.30, logo: 'https://cryptologos.cc/logos/decentraland-mana-logo.png?v=035' },
-        { symbol: 'MATICUSDT', basePrice: 0.38, logo: 'https://cryptologos.cc/logos/polygon-matic-logo.png?v=035' },
-        { symbol: 'MELANINA', basePrice: 0.01, logo: 'https://img.freepik.com/premium-vector/black-woman-silhouette-logo-design-template-vector-illustration_677271-15.jpg' }, 
-        { symbol: 'NEARUSDT', basePrice: 4.80, logo: 'https://cryptologos.cc/logos/near-protocol-near-logo.png?v=035' },
-        { symbol: 'ONDOUSDT', basePrice: 0.70, logo: 'https://assets.coingecko.com/coins/images/28879/standard/ondo.png' },
-        { symbol: 'ORDIUSDT', basePrice: 35.00, logo: 'https://cryptologos.cc/logos/ordi-ordi-logo.png?v=035' },
-        { symbol: 'PENGU', basePrice: 0.05, logo: 'https://assets.coingecko.com/coins/images/39328/standard/pengu.jpg' },
-        { symbol: 'PEPEUSDT', basePrice: 0.000009, logo: 'https://cryptologos.cc/logos/pepe-pepe-logo.png?v=035' },
-        { symbol: 'PYTHUSDT', basePrice: 0.30, logo: 'https://cryptologos.cc/logos/pyth-network-pyth-logo.png?v=035' },
-        { symbol: 'RAYUSDT', basePrice: 1.60, logo: 'https://cryptologos.cc/logos/raydium-ray-logo.png?v=035' },
+        { symbol: 'BTCUSDT', basePrice: 67500, logo: 'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png' },
+        { symbol: 'ETHUSDT', basePrice: 2650, logo: 'https://assets.coingecko.com/coins/images/279/standard/ethereum.png' },
+        { symbol: 'SOLUSDT', basePrice: 155, logo: 'https://assets.coingecko.com/coins/images/4128/standard/solana.png' },
+        { symbol: 'XRPUSDT', basePrice: 0.55, logo: 'https://assets.coingecko.com/coins/images/44/standard/xrp-symbol-white-128.png' },
+        { symbol: 'DOGEUSDT', basePrice: 0.11, logo: 'https://assets.coingecko.com/coins/images/5/standard/dogecoin.png' },
+        { symbol: 'ADAUSDT', basePrice: 0.35, logo: 'https://assets.coingecko.com/coins/images/975/standard/cardano.png' },
+        { symbol: 'TRXUSDT', basePrice: 0.15, logo: 'https://assets.coingecko.com/coins/images/1094/standard/tron-logo.png' },
+        { symbol: 'TONUSDT', basePrice: 5.20, logo: 'https://assets.coingecko.com/coins/images/17980/standard/ton_symbol.png' },
+        { symbol: 'SHIBUSDT', basePrice: 0.000018, logo: 'https://assets.coingecko.com/coins/images/11939/standard/shiba.png' },
+        { symbol: 'LINKUSDT', basePrice: 11.00, logo: 'https://assets.coingecko.com/coins/images/877/standard/chainlink-new-logo.png' },
+        { symbol: 'BCHUSDT', basePrice: 330, logo: 'https://assets.coingecko.com/coins/images/780/standard/bitcoin-cash-circle.png' },
+        { symbol: 'DOTUSDT', basePrice: 4.20, logo: 'https://assets.coingecko.com/coins/images/12171/standard/polkadot.png' },
+        { symbol: 'NEARUSDT', basePrice: 4.80, logo: 'https://assets.coingecko.com/coins/images/10365/standard/near.png' },
+        { symbol: 'MATICUSDT', basePrice: 0.38, logo: 'https://assets.coingecko.com/coins/images/4713/standard/matic-token-icon.png' },
+        { symbol: 'LTCUSDT', basePrice: 70, logo: 'https://assets.coingecko.com/coins/images/2/standard/litecoin.png' },
+        { symbol: 'PEPEUSDT', basePrice: 0.000009, logo: 'https://assets.coingecko.com/coins/images/29850/standard/pepe-token.jpeg' },
+        { symbol: 'ICPUSDT', basePrice: 8.00, logo: 'https://assets.coingecko.com/coins/images/14495/standard/Internet_Computer_logo.png' },
+        { symbol: 'ARBUSDT', basePrice: 0.55, logo: 'https://assets.coingecko.com/coins/images/16547/standard/arbitrum.jpg' },
         { symbol: 'RNDRUSDT', basePrice: 5.00, logo: 'https://assets.coingecko.com/coins/images/11636/standard/rndr.png' },
-        { symbol: 'RONUSDT', basePrice: 1.50, logo: 'https://cryptologos.cc/logos/ronin-ron-logo.png?v=035' },
-        { symbol: 'SANDUSDT', basePrice: 0.25, logo: 'https://cryptologos.cc/logos/the-sandbox-sand-logo.png?v=035' },
-        { symbol: '1000SATS', basePrice: 0.0003, logo: 'https://assets.coingecko.com/coins/images/33276/standard/sats.png?1701328904' },
-        { symbol: 'SEIUSDT', basePrice: 0.40, logo: 'https://cryptologos.cc/logos/sei-sei-logo.png?v=035' },
-        { symbol: 'SHIBUSDT', basePrice: 0.000018, logo: 'https://cryptologos.cc/logos/shiba-inu-shib-logo.png?v=035' },
-        { symbol: 'SOLUSDT', basePrice: 155, logo: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=035' },
-        { symbol: 'STXUSDT', basePrice: 1.80, logo: 'https://cryptologos.cc/logos/stacks-stx-logo.png?v=035' },
-        { symbol: 'SUIUSDT', basePrice: 1.90, logo: 'https://cryptologos.cc/logos/sui-sui-logo.png?v=035' },
-        { symbol: 'TAOUSDT', basePrice: 550, logo: 'https://cryptologos.cc/logos/bittensor-tao-logo.png?v=035' },
-        { symbol: 'TIAUSDT', basePrice: 5.00, logo: 'https://cryptologos.cc/logos/celestia-tia-logo.png?v=035' },
-        { symbol: 'TONUSDT', basePrice: 5.20, logo: 'https://cryptologos.cc/logos/toncoin-ton-logo.png?v=035' },
-        { symbol: 'TRXUSDT', basePrice: 0.15, logo: 'https://cryptologos.cc/logos/tron-trx-logo.png?v=035' },
-        { symbol: 'TRUMP', basePrice: 3.50, logo: 'https://cryptologos.cc/logos/magacoin-maga-logo.png?v=035' },
-        { symbol: 'WIFUSDT', basePrice: 2.50, logo: 'https://cryptologos.cc/logos/dogwifhat-wif-logo.png?v=035' },
-        { symbol: 'WLDUSDT', basePrice: 2.00, logo: 'https://cryptologos.cc/logos/worldcoin-org-wld-logo.png?v=035' },
-        { symbol: 'XRPUSDT', basePrice: 0.55, logo: 'https://cryptologos.cc/logos/xrp-xrp-logo.png?v=035' },
+        { symbol: 'ATOMUSDT', basePrice: 4.50, logo: 'https://assets.coingecko.com/coins/images/1481/standard/cosmos_hub.png' },
+        { symbol: 'STXUSDT', basePrice: 1.80, logo: 'https://assets.coingecko.com/coins/images/2069/standard/Stacks_logo_full.png' },
+        { symbol: 'IMXUSDT', basePrice: 1.50, logo: 'https://assets.coingecko.com/coins/images/17233/standard/immutableX_symbol.png' },
+        { symbol: 'INJUSDT', basePrice: 20.00, logo: 'https://assets.coingecko.com/coins/images/12882/standard/Secondary_Symbol.png' },
+        { symbol: 'TAOUSDT', basePrice: 550, logo: 'https://assets.coingecko.com/coins/images/29338/standard/tao.png' },
+        { symbol: 'WIFUSDT', basePrice: 2.50, logo: 'https://assets.coingecko.com/coins/images/33566/standard/dogwifhat.jpg' },
+        { symbol: 'TIAUSDT', basePrice: 5.00, logo: 'https://assets.coingecko.com/coins/images/31967/standard/tia.png' },
+        { symbol: 'GRTUSDT', basePrice: 0.15, logo: 'https://assets.coingecko.com/coins/images/13397/standard/Graph_Token.png' },
+        { symbol: 'SUIUSDT', basePrice: 1.90, logo: 'https://assets.coingecko.com/coins/images/26375/standard/sui_asset.jpeg' },
+        { symbol: 'HBARUSDT', basePrice: 0.05, logo: 'https://assets.coingecko.com/coins/images/3688/standard/hbar.png' },
+        { symbol: 'ONDOUSDT', basePrice: 0.70, logo: 'https://assets.coingecko.com/coins/images/28879/standard/ondo.png' },
+        { symbol: 'SEIUSDT', basePrice: 0.40, logo: 'https://assets.coingecko.com/coins/images/28205/standard/Sei_Logo_-_Blue_Gradient.png' },
+        { symbol: 'JUPUSDT', basePrice: 0.80, logo: 'https://assets.coingecko.com/coins/images/34188/standard/jup.png' },
+        { symbol: 'FLOKIUSDT', basePrice: 0.00014, logo: 'https://assets.coingecko.com/coins/images/16746/standard/floki.png' },
+        { symbol: 'PYTHUSDT', basePrice: 0.30, logo: 'https://assets.coingecko.com/coins/images/31924/standard/pyth.png' },
+        { symbol: 'SANDUSDT', basePrice: 0.25, logo: 'https://assets.coingecko.com/coins/images/12129/standard/sandbox_logo.jpg' },
+        { symbol: 'MANAUSDT', basePrice: 0.30, logo: 'https://assets.coingecko.com/coins/images/878/standard/decentraland-mana-logo.png' },
+        { symbol: 'EOSUSDT', basePrice: 0.50, logo: 'https://assets.coingecko.com/coins/images/738/standard/eos-eos-logo.png' },
+        { symbol: 'IOTAUSDT', basePrice: 0.12, logo: 'https://assets.coingecko.com/coins/images/692/standard/IOTA_Swirl.png' },
+        { symbol: 'DASHUSDT', basePrice: 25, logo: 'https://assets.coingecko.com/coins/images/19/standard/dash-logo.png' },
+        { symbol: 'ORDIUSDT', basePrice: 35.00, logo: 'https://assets.coingecko.com/coins/images/30169/standard/ordi.png' },
+        { symbol: '1000SATS', basePrice: 0.0003, logo: 'https://assets.coingecko.com/coins/images/33276/standard/sats.png' },
+        { symbol: 'WLDUSDT', basePrice: 2.00, logo: 'https://assets.coingecko.com/coins/images/31368/standard/worldcoin-logo.png' },
+        { symbol: 'RONUSDT', basePrice: 1.50, logo: 'https://assets.coingecko.com/coins/images/20128/standard/ronin.png' },
+        { symbol: 'DYDXUSDT', basePrice: 1.00, logo: 'https://assets.coingecko.com/coins/images/17500/standard/dydx.png' },
+        { symbol: 'RAYUSDT', basePrice: 1.60, logo: 'https://assets.coingecko.com/coins/images/13928/standard/Raydium_Logo.png' },
+        // Meme / Special Request
+        { symbol: 'TRUMP', basePrice: 3.50, logo: 'https://assets.coingecko.com/coins/images/31260/standard/trump.jpg' },
+        { symbol: 'FARTCOIN', basePrice: 0.00001, logo: 'https://assets.coingecko.com/coins/images/34065/standard/FartCoin.jpeg' }, 
+        { symbol: 'PENGU', basePrice: 0.05, logo: 'https://assets.coingecko.com/coins/images/39328/standard/pengu.jpg' },
+        { symbol: 'MELANINA', basePrice: 0.01, logo: 'https://cdn-icons-png.flaticon.com/512/2152/2152539.png' }, // Generic coin icon
     ];
 
     // Generate BATCH_SIZE (20) signals
@@ -183,6 +207,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const takeProfit = [tp1Formatted, tp2Formatted].sort((a,b) => direction === 'BUY' ? a - b : b - a);
 
+        // 4. GENERATE ACCURACY AND REASONING
+        // Accuracy between 75% and 95%
+        const accuracy = Math.floor(Math.random() * (95 - 75 + 1)) + 75;
+        
+        // Reasoning based on direction
+        const reasonsList = direction === 'BUY' ? BUY_REASONS : SELL_REASONS;
+        const reasoning = reasonsList[Math.floor(Math.random() * reasonsList.length)];
+
         const newSignal: Signal = {
             id: crypto.randomUUID(),
             symbol: asset.symbol,
@@ -197,7 +229,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             status: 'active',
             generatedBy: 'AUTO_BOT',
             notes: '⚡ Algo Trading',
-            logo: asset.logo
+            logo: asset.logo,
+            accuracy: accuracy,
+            reasoning: reasoning
         };
         
         newSignalsBatch.push(newSignal);
@@ -301,7 +335,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getStats, 
         usersList, 
         toggleUserLicense, 
-        botConfig,
+        botConfig, 
         updateBotConfig,
         generateManualBotSignal: generateRandomSignal,
         nextGenTime

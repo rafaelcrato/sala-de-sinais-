@@ -35,6 +35,8 @@ export interface Signal {
   generatedBy: 'MANUAL' | 'AUTO_BOT';
   result?: 'WIN' | 'LOSS' | 'NEUTRAL';
   logo?: string;
+  accuracy: number; // 0-100 percentage
+  reasoning: string; // Technical reason for the signal
 }
 
 export interface BotConfig {

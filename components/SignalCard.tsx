@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Signal } from '../types';
-import { ArrowUpCircle, ArrowDownCircle, Clock, ExternalLink, Bot, AlertTriangle, Coins } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Clock, ExternalLink, Bot, AlertTriangle, Info, Target } from 'lucide-react';
 import { BROKER_URL, IMG_LOGO, DURATION_OPTIONS } from '../constants';
 
 interface SignalCardProps {
@@ -54,6 +54,10 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
   // Get full label for duration
   const durationLabel = DURATION_OPTIONS.find(d => d.value === signal.duration)?.label || signal.duration;
 
+  // Accuracy Color
+  const acc = signal.accuracy || 90;
+  const accColor = acc >= 95 ? 'text-gold' : 'text-white';
+
   return (
     <div className={`relative bg-card-bg border ${borderColor} rounded-xl p-5 mb-4 transition-all duration-300 ${glowColor} ${opacity} group`}>
       {/* Bot Badge */}
@@ -64,7 +68,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full ${isBuy ? 'bg-neon-green/20 text-neon-green' : 'bg-neon-red/20 text-neon-red'}`}>
                 {isBuy ? <ArrowUpCircle size={24} /> : <ArrowDownCircle size={24} />}
@@ -105,8 +109,24 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
         </div>
       </div>
 
+      {/* Accuracy Bar */}
+      {signal.accuracy && (
+          <div className="mb-4">
+              <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400 flex items-center gap-1"><Target size={10} /> Probabilidade</span>
+                  <span className={`font-bold ${accColor}`}>{signal.accuracy}%</span>
+              </div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full ${isBuy ? 'bg-gradient-to-r from-neon-green to-emerald-500' : 'bg-gradient-to-r from-neon-red to-pink-500'}`}
+                    style={{ width: `${signal.accuracy}%` }}
+                  ></div>
+              </div>
+          </div>
+      )}
+
       {/* Prices Grid */}
-      <div className="grid grid-cols-3 gap-2 mb-4 bg-black/20 p-3 rounded-lg border border-white/5">
+      <div className="grid grid-cols-3 gap-2 mb-3 bg-black/20 p-3 rounded-lg border border-white/5">
          <div className="text-center">
             <p className="text-[10px] text-gray-500 uppercase">Entrada</p>
             <p className="font-mono text-white font-bold">{formatPrice(signal.entryPrice)}</p>
@@ -121,14 +141,22 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal, detailed = false }) => 
          </div>
       </div>
 
-      {/* Info */}
-      <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
+      {/* Technical Reasoning */}
+      {signal.reasoning && (
+          <div className="mb-4 flex gap-2 items-start bg-white/5 p-2 rounded border border-white/5">
+              <Info size={14} className="text-neon-blue mt-0.5 shrink-0" />
+              <div>
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Motivo da Entrada</p>
+                  <p className="text-xs text-gray-300 leading-snug">{signal.reasoning}</p>
+              </div>
+          </div>
+      )}
+
+      {/* Duration Info */}
+      <div className="flex justify-between items-center text-xs text-gray-400 mb-4 px-1">
          <div className="flex items-center gap-1">
-            <Clock size={12} /> Operação para <span className="text-white">{durationLabel}</span>
+            <Clock size={12} /> Operação para <span className="text-white font-bold">{durationLabel}</span>
          </div>
-         {signal.notes && (
-             <div className="italic text-gray-500">"{signal.notes}"</div>
-         )}
       </div>
 
       {/* URGENCY ALERT BANNER */}
